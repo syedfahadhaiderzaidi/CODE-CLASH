@@ -228,7 +228,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 
 <div id="toast" class="toast hidden"></div>
 
 <script>
-/* ================= CodeClash — API + WebSocket client ================= */
+/* ================= CodeClash — API + polling client ================= */
 const API = {
   async req(path, opts = {}) {
     const res = await fetch("/api" + path, {
@@ -247,7 +247,7 @@ const API = {
 
 let current = { room: null, user: null, isAdmin: false };
 let rooms = [], questions = [], queue = [], users = [], live = null;
-let timerInterval = null, ws = null, wsRoom = null, wsReconnect = null, wsAdmin = false;
+let timerInterval = null, pollTimer = null, pollRoom = null;
 
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
@@ -258,20 +258,26 @@ function show(id){
 }
 function closeModal(id){$(id).classList.add("hidden")}
 
-/* ---------- WebSocket live sync ---------- */
-function wsConnect(room, admin) {
-  if (ws) { ws.onclose = null; ws.close(); ws = null; }
-  clearTimeout(wsReconnect);
-  if (!room) { wsRoom = null; return; }
-  wsRoom = room; wsAdmin = !!admin;
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  ws = new WebSocket(proto + "://" + location.host + "/ws?room=" + encodeURIComponent(room) + (admin ? "&admin=1" : ""));
-  ws.onmessage = e => {
-    const msg = JSON.parse(e.data);
-    if (msg.type === "state") { live = msg.live; renderGameUI(); }
-    else if (msg.type === "users") loadUsers();
-  };
-  ws.onclose = () => { if (wsRoom) wsReconnect = setTimeout(() => wsConnect(wsRoom, wsAdmin), 2000); };
+/* ---------- live sync via polling (serverless-safe, ~1.5s latency) ---------- */
+async function pollState() {
+  if (!pollRoom) return;
+  try {
+    const data = await API.get("/rooms/" + encodeURIComponent(pollRoom) + "/state");
+    live = data.live;
+    users = data.users || [];
+    if (current.isAdmin) $("online").textContent = users.filter(u => u.online).length;
+    $("leaderboard").innerHTML = users.length
+      ? users.map((u,i) => `<div class="queue-item"><span>${i+1}. ${esc(u.name)}${u.online?" <span class='winner'>●</span>":""}</span><b>${u.score}</b></div>`).join("")
+      : "No students yet";
+    renderGameUI();
+  } catch { /* transient — next tick retries */ }
+}
+function startPolling(room) {
+  clearInterval(pollTimer);
+  if (!room) { pollRoom = null; return; }
+  pollRoom = room;
+  pollState();
+  pollTimer = setInterval(pollState, 1500);
 }
 
 /* ---------- breadcrumbs / navigation ---------- */
@@ -418,7 +424,7 @@ async function clearQueue(){
 /* ---------- admin: room selection & live control ---------- */
 function selectRoom(id){
   current.room = id;
-  wsConnect(id, current.isAdmin);
+  startPolling(id);
   $("currentRoom").textContent = id;
   renderRoomButtons();
   renderAdminBreadcrumb();
@@ -555,7 +561,7 @@ async function joinRoom(){
     current.room = id; current.user = name;
     $("studentRoom").classList.remove("hidden");
     $("myRoom").textContent = id;
-    wsConnect(id, false);
+    startPolling(id);
     await Promise.all([refreshLive(), loadUsers()]);
     renderStudentBreadcrumb();
     toast("Joined room " + id);
@@ -572,7 +578,7 @@ async function buzz(){
   try {
     const r = await API.post(`/rooms/${roomParam}/buzz`, { name: current.user });
     if (r.ok) toast("You were first!");
-  } catch (e) { /* someone was faster — state arrives via WebSocket */ }
+  } catch (e) { /* someone was faster — state arrives via polling */ }
 }
 async function answer(i){
   if (!live || live.first !== current.user) return toast("You must hit the buzzer first");

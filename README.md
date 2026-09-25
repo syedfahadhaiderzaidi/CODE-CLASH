@@ -1,66 +1,66 @@
 # CodeClash — Full-Stack Live Quiz Platform
 
-The original single-file HTML quiz, upgraded to a real **frontend + backend + database** stack.
+The original single-file HTML quiz, upgraded to a real **frontend + backend + database** stack — and deployable to **Vercel** (serverless) or runnable locally.
 
 ## Stack
-
 | Layer | Tech |
 |---|---|
 | Frontend | Vanilla HTML/CSS/JS served from `public/` (same cyber-tech design) |
-| Backend | Node.js + Express REST API + WebSocket (`ws`) for live buzzer sync |
-| Database | SQLite via `better-sqlite3`, file at `data/codeclash.db` |
+| Backend | Node.js + Express REST API (`server/app.js`), also exported as a Vercel serverless function (`api/index.js`) |
+| Live sync | 1.5s polling of `/api/rooms/:id/state` (serverless platforms don't support WebSockets) |
+| Database | SQLite via `@libsql/client` — **local file** in dev, **Turso cloud DB** in production |
 
-## Run
-
+## Run locally
 ```bash
 npm install
 npm start        # → http://localhost:3000
-npm run dev      # same, with auto-reload on server changes
 ```
+No setup needed: a SQLite file database is created and seeded automatically at `data/codeclash.db`.
 
-Set `PORT` to change the port: `PORT=4000 npm start`
+## Deploy on Vercel (with Turso)
+The app is serverless-ready, but the database must live in the cloud (a file DB would reset between requests). Turso has a free tier.
 
-## Try it
+1. **Create the Turso database** ([turso.tech](https://turso.tech), free account):
+   ```bash
+   turso db create codeclash
+   turso db show codeclash --url        # → TURSO_DATABASE_URL
+   turso db tokens create codeclash     # → TURSO_AUTH_TOKEN
+   ```
+2. **Push this repo to GitHub** (already done if you followed the earlier steps).
+3. **Import the repo on Vercel** ([vercel.com/new](https://vercel.com/new)) — framework preset **Other**, no build command.
+4. **Add environment variables** in Vercel → Project → Settings → Environment Variables:
+   | Name | Value |
+   |---|---|
+   | `TURSO_DATABASE_URL` | the `libsql://...` URL from step 1 |
+   | `TURSO_AUTH_TOKEN` | the token from step 1 |
+5. **Deploy.** The schema and demo rooms (`TECH101`, `CS2026`) are created automatically on the first API request.
 
-- **Student:** open the app → *Continue as Student* → room `TECH101`, any name → *Try Demo Room*
-- **Admin:** *Admin Login* → username `admin`, password `1234` → select a room → *Push MCQ Live*
-- Open a second browser window as another student to see the buzzer race live.
+> **Note on Vercel:** everything works — rooms, questions, queue, buzzer race (atomic), scoring, leaderboard. The only difference from local: live updates arrive via 1.5s polling instead of instant WebSocket pushes.
 
-## Architecture
+## Admin
+Default login: `admin` / `1234`. After login you choose a room — create a new one or re-enter an existing room ID.
 
+## API overview
+All endpoints live under `/api`:
+
+- `POST /login` — admin auth
+- `GET /rooms` · `POST /rooms` · `GET /rooms/:id/exists`
+- `GET /questions` · `POST /questions`
+- `GET/POST /rooms/:id/queue` · `DELETE /rooms/:id/queue[/:index]`
+- `POST /rooms/:id/join|heartbeat|leave` · `GET /rooms/:id/users`
+- `GET /rooms/:id/state` — combined live-round + leaderboard poll
+- `GET /rooms/:id/live`
+- `POST /rooms/:id/push|unlock|reset|buzz|answer`
+
+Every answer is logged in the `answers` table for future analytics.
+
+## Project layout
 ```
-public/index.html   ← frontend (original design, now API-driven)
-server/index.js     ← Express REST API + WebSocket server
-server/db.js        ← SQLite schema + seed data
-data/codeclash.db   ← the database (created on first run)
+├── public/index.html     ← Frontend (API + polling client)
+├── server/app.js         ← Express app (all REST routes)
+├── server/db.js          ← Data layer (libSQL: local file or Turso)
+├── server/index.js       ← Local dev entry (`npm start`)
+├── api/index.js          ← Vercel serverless entry
+├── vercel.json           ← Routes all requests to the function (static files served first)
+└── CodeClash-Tech-Interactive.html  ← the original standalone file, kept for reference
 ```
-
-Tables: `rooms`, `questions`, `queues`, `users`, `live_state`, `answers`.
-Answers are also logged to `answers` for future analytics/exports.
-
-## API
-
-| Method | Route | Purpose |
-|---|---|---|
-| POST | `/api/login` | Admin login (`admin` / `1234`) |
-| GET/POST | `/api/rooms` | List / create rooms |
-| GET | `/api/rooms/:id/exists` | Room existence check |
-| GET/POST | `/api/questions` | List / create MCQs |
-| GET/POST | `/api/rooms/:id/queue` | View / append to queue |
-| DELETE | `/api/rooms/:id/queue[/:index]` | Clear / remove queue item |
-| POST | `/api/rooms/:id/join` | Student joins a room |
-| POST | `/api/rooms/:id/heartbeat` · `/leave` | Presence tracking |
-| GET | `/api/rooms/:id/users` | Leaderboard |
-| GET | `/api/rooms/:id/live` | Current live state |
-| POST | `/api/rooms/:id/push` · `/unlock` · `/reset` | Admin round controls |
-| POST | `/api/rooms/:id/buzz` · `/answer` | Student gameplay |
-| WS | `/ws?room=ID` | Live state + leaderboard push |
-
-## Notes
-
-- Buzzer and answer endpoints are transactional — two students hitting *BUZZ* at the
-  same millisecond cannot both win, and non-joined users are rejected (403).
-- Students never receive the correct answer while a round is live; it is only
-  revealed once someone has answered.
-- The old localStorage client is preserved (commented out) at the bottom of
-  `public/index.html` for reference; the original standalone file is untouched.
