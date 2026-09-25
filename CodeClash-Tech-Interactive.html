@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CodeClash Tech Quiz</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#050912;color:#eaf2ff}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.app{min-height:100vh;background:radial-gradient(circle at 80% 0%,#123b5d 0,#050912 42%),#050912}
+nav{height:70px;border-bottom:1px solid #17334b;display:flex;align-items:center;justify-content:space-between;padding:0 5%;background:#06101bcc;backdrop-filter:blur(12px)}
+.logo{font-size:22px;font-weight:900;letter-spacing:1px}.logo span{color:#20d9ff}
+main{max-width:1200px;margin:auto;padding:35px 22px}
+.hero{text-align:center;padding:45px 0}.hero h1{font-size:clamp(40px,6vw,72px);margin:10px 0}.hero p{color:#8ea6bb;max-width:720px;margin:auto;font-size:17px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}.card{background:#091321;border:1px solid #17334b;border-radius:18px;padding:22px;box-shadow:0 15px 50px #0005}
+.btn{border:1px solid #23435c;background:#0d1d2d;color:#fff;padding:11px 16px;border-radius:10px}.btn:hover{border-color:#20d9ff}.primary{background:#087eaa;border-color:#20d9ff}.success{background:#087956;border-color:#18dca8}.danger{background:#922f45;border-color:#ff637f}
+.hidden{display:none!important}.muted{color:#8ea6bb}.tag{display:inline-block;padding:5px 9px;border-radius:999px;background:#0b2940;color:#20d9ff;font-size:12px;margin:4px}
+.modal{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}.modalbox{width:min(500px,100%);background:#091321;border:1px solid #24516c;border-radius:18px;padding:25px}
+input,select,textarea{width:100%;padding:12px;background:#06101c;border:1px solid #23435c;color:#fff;border-radius:9px;margin:6px 0 14px;outline:none}
+label{font-size:13px;color:#a8bdcf}.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.role-card{padding:25px;text-align:center;border:1px solid #23435c;border-radius:15px;background:#081522}.role-card:hover{border-color:#20d9ff}
+.quiz{display:grid;grid-template-columns:1fr 300px;gap:18px}.question{font-size:28px;font-weight:800;line-height:1.3;margin:18px 0}.code{background:#040a11;border:1px solid #17334b;border-radius:12px;padding:16px;white-space:pre-wrap;font-family:monospace;color:#8ceaff}
+.buzzer{width:min(300px,75vw);height:300px;border-radius:50%;border:12px solid #173447;background:radial-gradient(circle,#12bde9,#075579);color:#fff;font-size:38px;font-weight:900;box-shadow:0 0 35px #00c8ff44}.buzzer:disabled{opacity:.35;filter:grayscale(1)}
+.center{text-align:center}.timer{font-size:52px;font-weight:900;margin:12px}.winner{color:#20d9ff;font-weight:800}.answer-result{margin-top:16px;padding:14px;border-radius:12px;border:1px solid #23435c;background:#07111d}.answer-result.good{border-color:#18dca8;color:#18dca8}.answer-result.bad{border-color:#ff637f;color:#ff637f}
+.admin-layout{display:grid;grid-template-columns:210px 1fr;gap:18px}.side button{width:100%;text-align:left;margin:4px 0}.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{padding:17px;background:#07111d;border:1px solid #17334b;border-radius:13px}.stat b{font-size:26px;display:block;margin-top:5px}.roombar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 18px}.active{border-color:#20d9ff!important;background:#0c3046!important}
+.livebox{border:1px solid #20d9ff;background:#061723;padding:20px;border-radius:14px}.first{font-size:22px;color:#20d9ff;font-weight:900}.queue-item{padding:12px;border-bottom:1px solid #17334b;display:flex;justify-content:space-between;gap:10px}
+.breadcrumbs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 18px;color:#8ea6bb;font-size:14px}.breadcrumbs a,.breadcrumbs button{color:#8ea6bb;text-decoration:none;background:none;border:0;padding:0;cursor:pointer}.breadcrumbs a:hover,.breadcrumbs button:hover{color:#20d9ff}.breadcrumbs .current{color:#20d9ff;font-weight:700}.breadcrumbs .sep{color:#34556d}.toast{position:fixed;right:20px;bottom:20px;background:#0b1b29;border:1px solid #20d9ff;padding:13px 18px;border-radius:10px;z-index:30}
+@media(max-width:800px){.quiz,.admin-layout{grid-template-columns:1fr}.statgrid{grid-template-columns:1fr}.role-grid{grid-template-columns:1fr}}
+
+/* ===== Interactive Cyber-Tech Theme ===== */
+:root{--cyan:#27e8ff;--blue:#397bff;--violet:#9b6cff;--green:#29f0b4;--bg:#03050d;--panel:rgba(8,13,28,.82)}
+body{background:var(--bg);overflow-x:hidden}
+.app{position:relative;min-height:100vh;background:radial-gradient(circle at 50% -10%,rgba(39,232,255,.13),transparent 32%),radial-gradient(circle at 90% 50%,rgba(155,108,255,.10),transparent 30%),#03050d;isolation:isolate}
+.tech-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(39,232,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(39,232,255,.055) 1px,transparent 1px);background-size:45px 45px;mask-image:linear-gradient(to bottom,black,transparent 92%);animation:gridMove 16s linear infinite}
+.tech-grid:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 20%,rgba(39,232,255,.10),transparent 2px),radial-gradient(circle at 80% 70%,rgba(155,108,255,.12),transparent 2px);background-size:170px 170px,220px 220px;animation:drift 12s linear infinite}
+.scanlines{position:fixed;inset:0;z-index:8;pointer-events:none;opacity:.08;background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(255,255,255,.15) 4px);mix-blend-mode:screen}
+#codeRain{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:.25}
+.code-particle{position:absolute;color:var(--cyan);font:600 12px/1.2 Consolas,monospace;white-space:nowrap;text-shadow:0 0 12px rgba(39,232,255,.8);animation:fall linear infinite}
+nav{position:sticky;top:0;z-index:10;height:74px;border-bottom:1px solid rgba(39,232,255,.18);background:rgba(2,7,18,.72);box-shadow:0 10px 35px rgba(0,0,0,.25);backdrop-filter:blur(18px)}
+.logo{position:relative;color:#f4fbff;text-shadow:0 0 18px rgba(39,232,255,.35)}
+.logo:after{content:"_";color:var(--cyan);animation:blink .8s steps(2,end) infinite}
+main{position:relative;z-index:3}
+.hero{position:relative;min-height:410px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.hero:before{content:"</>  { }  #include < >  0101  =>  function()  const  &&  ||";position:absolute;top:22%;left:-10%;width:120%;font:700 clamp(15px,2vw,24px) Consolas,monospace;letter-spacing:8px;color:rgba(39,232,255,.08);animation:codeSlide 18s linear infinite;white-space:nowrap}
+.hero h1{position:relative;letter-spacing:-2px;text-shadow:0 0 35px rgba(39,232,255,.16)}
+.hero h1 span{color:var(--cyan)!important;text-shadow:0 0 22px rgba(39,232,255,.45)}
+.hero p{position:relative}
+.tag{border:1px solid rgba(39,232,255,.4);box-shadow:0 0 18px rgba(39,232,255,.12);animation:tagPulse 2.2s ease-in-out infinite}
+.card,.modalbox,.role-card,.stat,.livebox{background:linear-gradient(145deg,rgba(10,18,38,.88),rgba(4,9,21,.82));border-color:rgba(39,232,255,.16);box-shadow:0 18px 55px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.025);transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+.card:hover,.role-card:hover{border-color:rgba(39,232,255,.45);box-shadow:0 22px 70px rgba(0,0,0,.38),0 0 30px rgba(39,232,255,.06);transform:translateY(-2px)}
+.role-card{position:relative;overflow:hidden}.role-card:before{content:"";position:absolute;inset:-60%;background:conic-gradient(from 0deg,transparent,rgba(39,232,255,.10),transparent 30%);animation:spin 8s linear infinite}
+.role-card>*{position:relative;z-index:1}
+.btn{position:relative;overflow:hidden;border-color:rgba(39,232,255,.22);background:rgba(8,20,39,.78);transition:transform .15s ease,box-shadow .2s,border-color .2s}
+.btn:hover{border-color:var(--cyan);box-shadow:0 0 20px rgba(39,232,255,.16);transform:translateY(-1px)}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(135deg,#087ea9,#3157c8);box-shadow:0 0 24px rgba(39,232,255,.12)}
+.btn.success{background:linear-gradient(135deg,#087956,#0b6b91)}
+.buzzer{position:relative;background:radial-gradient(circle at 35% 30%,#5df3ff,#0879aa 45%,#071a35 72%);border-color:rgba(39,232,255,.7);box-shadow:0 0 0 0 rgba(39,232,255,.35),0 0 45px rgba(39,232,255,.24),inset 0 0 30px rgba(255,255,255,.12);animation:buzzerGlow 2s ease-in-out infinite}
+.buzzer:before,.buzzer:after{content:"";position:absolute;inset:-20px;border:1px solid rgba(39,232,255,.25);border-radius:50%;animation:ring 2.4s ease-out infinite}
+.buzzer:after{animation-delay:1.2s}.buzzer:disabled{animation:none}.buzzer:disabled:before,.buzzer:disabled:after{display:none}
+.livebox{position:relative;overflow:hidden}.livebox:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),var(--violet),transparent);animation:laser 2.5s linear infinite}
+.livebox .muted:first-child:before{content:"● ";color:#ff466f;animation:blink 1s steps(2,end) infinite}
+.first{color:var(--cyan);text-shadow:0 0 16px rgba(39,232,255,.3)}
+.timer{text-shadow:0 0 18px rgba(39,232,255,.35)}
+.code{position:relative;border-color:rgba(39,232,255,.22);background:rgba(1,5,13,.9);box-shadow:inset 0 0 30px rgba(39,232,255,.04);overflow:hidden}
+.code:before{content:"● ● ●";display:block;color:#27e8ff;font-size:10px;letter-spacing:4px;margin-bottom:12px;opacity:.65}
+input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(39,232,255,.08),0 0 20px rgba(39,232,255,.08)}
+.breadcrumbs .current{color:var(--cyan);text-shadow:0 0 10px rgba(39,232,255,.25)}
+.toast{background:rgba(5,13,27,.94);border-color:rgba(39,232,255,.55);box-shadow:0 0 30px rgba(39,232,255,.15)}
+@keyframes gridMove{to{background-position:0 45px,45px 0}}
+@keyframes drift{to{background-position:170px 170px, -220px 220px}}
+@keyframes fall{from{transform:translateY(-15vh);opacity:0}10%{opacity:1}85%{opacity:.65}to{transform:translateY(115vh);opacity:0}}
+@keyframes codeSlide{to{transform:translateX(12%)}}
+@keyframes blink{50%{opacity:.15}}
+@keyframes tagPulse{50%{box-shadow:0 0 30px rgba(39,232,255,.22)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ring{0%{transform:scale(.8);opacity:.7}100%{transform:scale(1.25);opacity:0}}
+@keyframes buzzerGlow{50%{box-shadow:0 0 0 12px rgba(39,232,255,.04),0 0 65px rgba(39,232,255,.34),inset 0 0 30px rgba(255,255,255,.15)}}
+@keyframes laser{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@media(max-width:800px){.hero{min-height:340px}.tech-grid{background-size:30px 30px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;scroll-behavior:auto!important}}
+
+</style>
+</head>
+<body>
+<div class="app">
+<div class="tech-grid"></div><div class="scanlines"></div><div id="codeRain"></div>
+<nav><div class="logo">CODE<span>CLASH</span></div><div id="navActions"></div></nav>
+
+<main id="home">
+<section class="hero">
+<div class="tag">LIVE TECH QUIZ PLATFORM</div>
+<h1>Think Fast.<br><span style="color:#20d9ff">Code Faster.</span></h1>
+<p>Join a live room, answer MCQs and compete to buzz first.</p>
+</section>
+<div class="card" style="max-width:620px;margin:auto;text-align:center">
+<h2>Who are you?</h2><p class="muted">Choose your access type to continue.</p>
+<div class="role-grid">
+<div class="role-card"><h3>🎓 Student</h3><p class="muted">Join a room and participate in the live quiz.</p><button class="btn primary" onclick="studentStart()">Continue as Student</button></div>
+<div class="role-card"><h3>🛠 Admin</h3><p class="muted">Create rooms, manage MCQs and control the live quiz.</p><button class="btn" onclick="showAdminLogin()">Admin Login</button></div>
+</div>
+</div>
+</main>
+
+<main id="student" class="hidden">
+<div id="studentBreadcrumb" class="breadcrumbs"></div>
+<div class="card">
+<h2>Student Dashboard</h2>
+<p class="muted">Enter the room ID provided by your admin.</p>
+<label>Room ID / Code</label><input id="roomCode" placeholder="e.g. CS101">
+<label>Your Name / Team Name</label><input id="studentName" placeholder="e.g. Code Warriors">
+<button class="btn primary" onclick="joinRoom()">Join Room</button><button class="btn" style="margin-left:8px" onclick="demoJoin()">Try Demo Room</button>
+</div>
+<div id="studentRoom" class="hidden" style="margin-top:18px">
+<div class="quiz">
+<section class="card">
+<div id="qmeta" class="muted">Waiting for admin...</div>
+<div id="question" class="question">No live question.</div>
+<pre id="code" class="code hidden"></pre>
+<div id="options"></div>
+<div class="center" style="margin-top:25px"><button class="buzzer" id="buzzer" onclick="buzz()">BUZZ</button><div id="timer" class="timer">--</div><div id="status" class="winner">Waiting for question</div><div id="studentResult" class="answer-result hidden"></div></div>
+</section>
+<aside class="card"><h3>Room</h3><div id="myRoom"></div><hr style="border-color:#17334b"><h3>Leaderboard</h3><div id="leaderboard"></div></aside>
+</div>
+</div>
+</main>
+
+<main id="admin" class="hidden">
+<div id="adminBreadcrumb" class="breadcrumbs"></div>
+<div class="admin-layout">
+<div class="side">
+<button class="btn active" onclick="adminTab('dashboard',this)">Live Dashboard</button>
+<button class="btn" onclick="adminTab('rooms',this)">Rooms</button>
+<button class="btn" onclick="adminTab('questions',this)">MCQs</button>
+<button class="btn" onclick="adminTab('queue',this)">Queue</button>
+</div>
+<section>
+<div id="dashboardTab" class="card">
+<h2>Admin Live Preview</h2>
+<div class="roombar" id="adminRooms"></div>
+<div class="livebox">
+<div class="muted">LIVE QUESTION</div>
+<h2 id="liveQuestion">No question live</h2>
+<pre id="liveCode" class="code hidden"></pre>
+<p>First user to hit the buzzer:</p><div id="liveFirst" class="first">Nobody yet</div>
+<div class="timer" id="adminTimer">--</div><div id="liveResult" class="answer-result hidden"></div>
+</div>
+<div class="statgrid" style="margin-top:15px">
+<div class="stat">Students Online<b id="online">0</b></div>
+<div class="stat">Queue Length<b id="queueCount">0</b></div>
+<div class="stat">Room ID<b id="currentRoom">—</b></div>
+</div>
+<div class="roombar" style="margin-top:18px">
+<button class="btn primary" onclick="pushQuestion()">Push MCQ Live</button>
+<button class="btn" onclick="unlock()">Unlock Buzzer</button>
+<button class="btn danger" onclick="resetRound()">Reset Round</button>
+</div>
+</div>
+
+<div id="roomsTab" class="card hidden">
+<h2>Create Room</h2><p class="muted">Use any value as the room ID.</p>
+<label>Room ID / Code</label><input id="newRoomId" placeholder="e.g. WEB2026">
+<label>Room Name</label><input id="newRoomName" placeholder="e.g. Web Development Quiz">
+<button class="btn success" onclick="createRoom()">Create Room</button>
+<div id="roomList" style="margin-top:20px"></div>
+</div>
+
+<div id="questionsTab" class="card hidden">
+<h2>MCQ Manager</h2>
+<label>Question</label><textarea id="qtext" rows="3"></textarea>
+<label>Optional Code</label><textarea id="qcode" rows="4"></textarea>
+<label>Options — one per line</label><textarea id="qopts" rows="4" placeholder="Option A&#10;Option B&#10;Option C&#10;Option D"></textarea>
+<label>Correct option number</label><input id="qcorrect" type="number" min="1" max="4" value="1">
+<button class="btn success" onclick="addQuestion()">Add MCQ</button>
+<div id="qlist" style="margin-top:20px"></div>
+</div>
+
+<div id="queueTab" class="card hidden">
+<h2>Question Queue</h2><p class="muted">Add MCQs to the queue, arrange them, then push the next question live.</p>
+<div id="queueList"></div>
+<div class="roombar"><button class="btn primary" onclick="pushNext()">Push Next From Queue</button><button class="btn" onclick="clearQueue()">Clear Queue</button></div>
+</div>
+</section>
+</div>
+</main>
+</div>
+
+<div id="roleModal" class="modal hidden"><div class="modalbox">
+<h2>Choose Access</h2><div class="role-grid">
+<div class="role-card"><h3>🎓 Student</h3><button class="btn primary" onclick="studentStart();closeModal('roleModal')">Student</button></div>
+<div class="role-card"><h3>🛠 Admin</h3><button class="btn" onclick="closeModal('roleModal');showAdminLogin()">Admin</button></div>
+</div></div></div>
+
+<div id="adminModal" class="modal hidden"><div class="modalbox">
+<h2>Admin Login</h2><p class="muted">Use the same credentials for every admin.</p>
+<label>Username</label><input id="adminUser" placeholder="admin">
+<label>Password</label><input id="adminPass" type="password" placeholder="••••••••">
+<button class="btn primary" onclick="loginAdmin()">Login</button>
+<button class="btn" onclick="closeModal('adminModal')">Cancel</button>
+</div></div></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+const ADMIN_USERNAME="admin";
+const ADMIN_PASSWORD="1234";
+
+let db={
+ rooms:JSON.parse(localStorage.getItem("cc_rooms")||'[]'),
+ questions:JSON.parse(localStorage.getItem("cc_questions")||'[]'),
+ queues:JSON.parse(localStorage.getItem("cc_queues")||'{}'),
+ users:JSON.parse(localStorage.getItem("cc_users")||'{}'),
+ live:JSON.parse(localStorage.getItem("cc_live")||'{}')
+};
+
+let current={room:null,user:null,isAdmin:false};
+let timerInterval=null;
+// Sample data for testing
+function seedSampleData(){
+  if(db.rooms.length===0){
+    db.rooms=[
+      {id:"TECH101",name:"Web Development Demo"},
+      {id:"CS2026",name:"C++ Fundamentals Demo"}
+    ];
+  }
+  const samples=[
+    {id:"DEMO1",q:"Which language is primarily used to structure a web page?",code:"",opts:["CSS","HTML","Python","SQL"],correct:1},
+    {id:"DEMO2",q:"What does CPU stand for?",code:"",opts:["Central Processing Unit","Computer Personal Unit","Core Program Utility","Central Program User"],correct:0},
+    {id:"DEMO3",q:"What is the output of this C++ code?",code:'int x = 5;\ncout << x + 2;',opts:["5","7","52","Error"],correct:1},
+    {id:"DEMO4",q:"Which symbol is used for a single-line comment in C++?",code:"",opts:["//","/*","##","<!--"],correct:0}
+  ];
+  for(const q of samples) if(!db.questions.some(x=>x.id===q.id)) db.questions.push(q);
+  for(const r of db.rooms){
+    db.queues[r.id]??=[];
+    db.live[r.id]??=null;
+  }
+  if(db.queues["TECH101"].length===0) db.queues["TECH101"]=["DEMO1","DEMO2","DEMO3","DEMO4"];
+  if(!Object.keys(db.users).some(k=>k.startsWith("Demo"))){
+    db.users["DemoA@TECH101"]={name:"DemoA",room:"TECH101",score:20,online:true};
+    db.users["DemoB@TECH101"]={name:"DemoB",room:"TECH101",score:10,online:true};
+    db.users["DemoC@TECH101"]={name:"DemoC",room:"TECH101",score:0,online:true};
+  }
+  save();
+}
+seedSampleData();
+
+window.addEventListener("storage",()=>{
+  db.rooms=JSON.parse(localStorage.getItem("cc_rooms")||"[]");
+  db.questions=JSON.parse(localStorage.getItem("cc_questions")||"[]");
+  db.queues=JSON.parse(localStorage.getItem("cc_queues")||"{}");
+  db.users=JSON.parse(localStorage.getItem("cc_users")||"{}");
+  db.live=JSON.parse(localStorage.getItem("cc_live")||"{}");
+  if(current.isAdmin) renderAdmin();
+  if(current.room && !current.isAdmin) renderStudent();
+});
+
+
+function $(id){return document.getElementById(id)}
+function save(){localStorage.setItem("cc_rooms",JSON.stringify(db.rooms));localStorage.setItem("cc_questions",JSON.stringify(db.questions));localStorage.setItem("cc_queues",JSON.stringify(db.queues));localStorage.setItem("cc_users",JSON.stringify(db.users));localStorage.setItem("cc_live",JSON.stringify(db.live))}
+function toast(s){$("toast").textContent=s;$("toast").classList.remove("hidden");setTimeout(()=>$("toast").classList.add("hidden"),2200)}
+function show(id){
+ ["home","student","admin"].forEach(x=>$(x).classList.toggle("hidden",x!==id));
+ renderBreadcrumbs(id);
+}
+function closeModal(id){$(id).classList.add("hidden")}
+function studentStart(){show("student");$("roomCode").focus();renderStudentBreadcrumb()}
+function showAdminLogin(){$("adminModal").classList.remove("hidden")}
+function loginAdmin(){
+ if($("adminUser").value!==ADMIN_USERNAME||$("adminPass").value!==ADMIN_PASSWORD)return toast("Invalid username or password");
+ current.isAdmin=true;closeModal("adminModal");show("admin");if(!db.rooms.length)createDefaultRoom();renderAdmin();renderAdminBreadcrumb();
+}
+function createDefaultRoom(){db.rooms.push({id:"DEMO01",name:"Demo Tech Quiz"});db.queues["DEMO01"]=[];db.live["DEMO01"]=null;save()}
+function createRoom(){
+ let id=$("newRoomId").value.trim().toUpperCase(),name=$("newRoomName").value.trim()||"Live Quiz Room";
+ if(!id)return toast("Enter a room ID");
+ if(db.rooms.some(r=>r.id===id))return toast("Room already exists");
+ db.rooms.push({id,name});db.queues[id]=[];db.live[id]=null;save();
+ $("newRoomId").value="";$("newRoomName").value="";renderAdmin();toast("Room "+id+" created");
+}
+function demoJoin(){
+  $("roomCode").value="TECH101";
+  $("studentName").value="TestStudent";
+  joinRoom();
+}
+function joinRoom(){
+ let id=$("roomCode").value.trim().toUpperCase(),name=$("studentName").value.trim();
+ if(!id||!name)return toast("Enter room ID and your name");
+ if(!db.rooms.some(r=>r.id===id))return toast("Room not found");
+ current.room=id;current.user=name;
+ db.users[name+"@"+id]??={name,room:id,score:0,online:true};
+ db.users[name+"@"+id].online=true;save();
+ $("studentRoom").classList.remove("hidden");$("myRoom").textContent=id;renderStudent();renderStudentBreadcrumb();toast("Joined room "+id);
+}
+function currentLive(){return db.live[current.room]}
+function getQuestions(){return db.questions}
+function renderStudent(){
+ let live=currentLive();
+ if(!live){
+  $("qmeta").textContent="Waiting for admin...";$("question").textContent="No live question.";$("code").classList.add("hidden");$("options").innerHTML="";$("buzzer").disabled=true;$("status").textContent="Waiting for question";$("timer").textContent="--";$("studentResult").classList.add("hidden");$("studentResult").textContent="";return
+ }
+ let q=db.questions.find(x=>x.id===live.questionId);
+ if(!q)return;
+ $("qmeta").textContent="LIVE • "+q.id;$("question").textContent=q.q;$("code").textContent=q.code||"";$("code").classList.toggle("hidden",!q.code);
+ $("options").innerHTML=q.opts.map((o,i)=>`<button class="btn" style="width:100%;margin:5px 0;text-align:left" ${live.result?"disabled":""} onclick="answer(${i})">${String.fromCharCode(65+i)}. ${o}</button>`).join("");
+ $("buzzer").disabled=!live.active||!!live.first||!!live.result;
+ $("status").textContent=live.first?(live.first===current.user?"You got the buzzer!":"Buzzer locked — "+live.first+" was first"):(live.active?"BUZZER OPEN":"Waiting");
+ if(live.result){
+  const r=live.result;
+  $("studentResult").className="answer-result "+(r.correct?"good":"bad");
+  $("studentResult").innerHTML=r.user===current.user
+    ? `<b>${r.correct?"Correct! +10 points":"Incorrect"}</b><br>Your answer: ${String.fromCharCode(65+r.answerIndex)}. ${r.answerText}<br>Correct answer: ${String.fromCharCode(65+q.correct)}. ${q.opts[q.correct]}`
+    : `<b>${r.correct?"Correct answer":"Answer was incorrect"}</b><br>${r.user} answered: ${String.fromCharCode(65+r.answerIndex)}. ${r.answerText}<br>Correct answer: ${String.fromCharCode(65+q.correct)}. ${q.opts[q.correct]}`;
+  $("studentResult").classList.remove("hidden");
+ } else { $("studentResult").classList.add("hidden");$("studentResult").textContent=""; }
+ renderLeaderboard();runTimer();
+}
+function renderLeaderboard(){
+ if(!current.room)return;
+ let arr=Object.values(db.users).filter(x=>x.room===current.room).sort((a,b)=>b.score-a.score);
+ $("leaderboard").innerHTML=arr.length?arr.map((u,i)=>`<div class="queue-item"><span>${i+1}. ${u.name}</span><b>${u.score}</b></div>`).join(""):"No students yet";
+}
+function buzz(){
+ let live=currentLive();if(!live||!live.active||live.first)return;
+ live.first=current.user;live.end=Date.now()+live.duration*1000;save();renderStudent();renderAdmin();toast(current.user+" was first!");
+}
+function answer(i){
+ let live=currentLive();if(!live||live.first!==current.user)return toast("You must hit the buzzer first");
+ if(live.result)return;
+ let q=db.questions.find(x=>x.id===live.questionId),u=db.users[current.user+"@"+current.room];
+ const correct=i===q.correct;
+ if(correct){u.score+=10;toast("Correct! +10 points")}else toast("Incorrect");
+ live.result={user:current.user,answerIndex:i,answerText:q.opts[i],correct};
+ live.active=false;live.end=0;save();renderStudent();renderAdmin();
+}
+function pushQuestion(){
+ if(!current.room)return toast("Create/select a room first");
+ let q=db.questions.find(x=>x.id===((db.queues[current.room]||[])[0]));
+ if(!q)return toast("Add an MCQ to the queue first");
+ db.queues[current.room].shift();
+ db.live[current.room]={questionId:q.id,active:true,first:null,end:0,duration:30};save();renderAdmin();toast("MCQ is live");
+}
+function pushNext(){pushQuestion();renderQueue()}
+function unlock(){
+ let live=currentLive();if(!live)return toast("No live question");
+ live.active=true;live.first=null;live.end=0;save();renderAdmin();renderStudent();toast("Buzzer unlocked");
+}
+function resetRound(){
+ if(!current.room)return;
+ db.live[current.room]=null;save();renderAdmin();renderStudent();toast("Round reset");
+}
+function runTimer(){
+ clearInterval(timerInterval);let live=currentLive();
+ if(!live||!live.first){$("timer").textContent=live&&live.active?"OPEN":"--";return}
+ timerInterval=setInterval(()=>{
+  let left=Math.max(0,live.end-Date.now());
+  $("timer").textContent=Math.ceil(left/1000)+"s";
+  if(left<=0){clearInterval(timerInterval);unlock()}
+ },200);
+}
+function renderAdmin(){
+ if(!current.isAdmin)return;
+ if(!current.room&&db.rooms.length)current.room=db.rooms[0].id;
+ $("adminRooms").innerHTML=db.rooms.map(r=>`<button class="btn ${r.id===current.room?"active":""}" onclick="selectRoom('${r.id}')">${r.id}</button>`).join("");
+ $("currentRoom").textContent=current.room||"—";
+ let users=Object.values(db.users).filter(x=>x.room===current.room);
+ $("online").textContent=users.filter(x=>x.online).length;
+ $("queueCount").textContent=(db.queues[current.room]||[]).length;
+ let live=currentLive();
+ if(!live){$("liveQuestion").textContent="No question live";$("liveCode").classList.add("hidden");$("liveFirst").textContent="Nobody yet";$("adminTimer").textContent="--"}
+ else{
+  let q=db.questions.find(x=>x.id===live.questionId);
+  $("liveQuestion").textContent=q?q.q:"Question missing";
+  $("liveCode").textContent=q?q.code:"";$("liveCode").classList.toggle("hidden",!q||!q.code);
+  $("liveFirst").textContent=live.first||"Nobody yet";
+  $("adminTimer").textContent=live.first&&!live.result?Math.max(0,Math.ceil((live.end-Date.now())/1000))+"s":(live.active?"OPEN":"--");
+  const result=$("liveResult");
+  if(live.result){
+    result.className="answer-result "+(live.result.correct?"good":"bad");
+    result.innerHTML=`<b>${live.result.correct?"CORRECT":"INCORRECT"}</b><br>${live.result.user} answered: ${String.fromCharCode(65+live.result.answerIndex)}. ${live.result.answerText}<br>Correct answer: ${String.fromCharCode(65+q.correct)}. ${q.opts[q.correct]}`;
+  } else { result.classList.add("hidden");result.textContent=""; }
+ }
+ renderRoomList();renderQuestionList();renderQueue();
+}
+function selectRoom(id){current.room=id;renderAdmin();renderStudent();renderAdminBreadcrumb();renderStudentBreadcrumb()}
+function renderRoomList(){$("roomList").innerHTML=db.rooms.map(r=>`<div class="queue-item"><span><b>${r.id}</b> — ${r.name}</span></div>`).join("")}
+function addQuestion(){
+ let opts=$("qopts").value.split("\n").map(x=>x.trim()).filter(Boolean);
+ let q=$("qtext").value.trim();let correct=Number($("qcorrect").value)-1;
+ if(!q||opts.length<2)return toast("Enter question and options");
+ let id="Q"+Date.now();db.questions.push({id,q,code:$("qcode").value.trim(),opts,correct});save();
+ $("qtext").value="";$("qcode").value="";$("qopts").value="";toast("MCQ added");renderQuestionList();
+}
+function renderQuestionList(){
+ $("qlist").innerHTML=db.questions.length?db.questions.map(q=>`<div class="queue-item"><span>${q.q}</span><button class="btn" onclick="addToQueue('${q.id}')">Add to Queue</button></div>`).join(""):"No MCQs yet.";
+}
+function addToQueue(id){
+ if(!current.room)return toast("Select a room first");
+ db.queues[current.room]??=[];db.queues[current.room].push(id);save();renderQueue();toast("Added to queue");
+}
+function renderQueue(){
+ if(!current.room)return;
+ let ids=db.queues[current.room]||[];
+ $("queueList").innerHTML=ids.length?ids.map((id,i)=>{let q=db.questions.find(x=>x.id===id);return `<div class="queue-item"><span>${i+1}. ${q?q.q:"Missing question"}</span><button class="btn danger" onclick="removeQueue(${i})">Remove</button></div>`}).join(""):"Queue is empty.";
+}
+function removeQueue(i){db.queues[current.room].splice(i,1);save();renderQueue()}
+function clearQueue(){db.queues[current.room]=[];save();renderQueue()}
+function renderBreadcrumbs(id){
+ if(id==="student") renderStudentBreadcrumb();
+ if(id==="admin") renderAdminBreadcrumb();
+}
+function renderStudentBreadcrumb(){
+ let room=current.room;
+ $("studentBreadcrumb").innerHTML=`<button onclick="show(\"home\")">Home</button><span class="sep">›</span><span class="current">Student Dashboard</span>${room?`<span class="sep">›</span><span class="current">Room: ${room}</span>`:""}`;
+}
+function renderAdminBreadcrumb(){
+ let tab=document.querySelector(".side .active");
+ let label=tab?tab.textContent.trim():"Live Dashboard";
+ $("adminBreadcrumb").innerHTML=`<button onclick="adminTab(\"dashboard\",document.querySelector(\".side .btn\"))">Home</button><span class="sep">›</span><span class="current">Admin</span><span class="sep">›</span><span class="current">${label}</span>${current.room?`<span class="sep">›</span><span class="current">Room: ${current.room}</span>`:""}`;
+}
+function adminTab(tab,btn){
+ ["dashboard","rooms","questions","queue"].forEach(x=>$(x+"Tab").classList.toggle("hidden",x!==tab));
+ document.querySelectorAll(".side .btn").forEach(b=>b.classList.remove("active"));btn.classList.add("active");
+ renderAdmin();renderAdminBreadcrumb();
+}
+
+function startTechEffects(){
+  const rain=document.getElementById("codeRain");
+  if(!rain||rain.children.length)return;
+  const bits=["</>","{}","=>","01","10","#include","const","let","if()","while()","&&","||","C++","HTML","CSS","JS","API","npm","git","sudo","0xFF"];
+  for(let i=0;i<28;i++){
+    const el=document.createElement("span");
+    el.className="code-particle";
+    el.textContent=bits[Math.floor(Math.random()*bits.length)];
+    el.style.left=Math.random()*100+"%";
+    el.style.animationDuration=(8+Math.random()*13)+"s";
+    el.style.animationDelay=(-Math.random()*15)+"s";
+    el.style.fontSize=(10+Math.random()*7)+"px";
+    rain.appendChild(el);
+  }
+}
+function addInteractiveEffects(){
+  document.querySelectorAll(".btn,.role-card,.card").forEach(el=>{
+    if(el.dataset.fx)return;
+    el.dataset.fx="1";
+    el.addEventListener("pointermove",e=>{
+      if(window.innerWidth<900)return;
+      const r=el.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width-.5;
+      const y=(e.clientY-r.top)/r.height-.5;
+      if(el.classList.contains("card")||el.classList.contains("role-card"))
+        el.style.transform=`perspective(700px) rotateX(${y*-2}deg) rotateY(${x*2}deg) translateY(-2px)`;
+    });
+    el.addEventListener("pointerleave",()=>{
+      if(el.classList.contains("card")||el.classList.contains("role-card"))el.style.transform="";
+    });
+  });
+}
+
+startTechEffects();
+addInteractiveEffects();
+setInterval(()=>{if(current.isAdmin){renderAdmin()}if(current.room&&!current.isAdmin)renderStudent()},1000);
+renderAdmin();
+</script>
+</body>
+</html>
