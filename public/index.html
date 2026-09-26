@@ -231,13 +231,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 
 /* ================= CodeClash — API + polling client ================= */
 const API = {
   async req(path, opts = {}) {
-    const res = await fetch("/api" + path, {
-      headers: { "Content-Type": "application/json" },
-      ...opts,
-      body: opts.body ? JSON.stringify(opts.body) : undefined
-    });
+    let res;
+    try {
+      res = await fetch("/api" + path, {
+        headers: { "Content-Type": "application/json" },
+        ...opts,
+        body: opts.body ? JSON.stringify(opts.body) : undefined
+      });
+    } catch {
+      throw new Error("Cannot reach the game server — check the deployment");
+    }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Request failed");
+    if (!res.ok) throw new Error(data.error || `Request failed (HTTP ${res.status})`);
     return data;
   },
   get: p => API.req(p),

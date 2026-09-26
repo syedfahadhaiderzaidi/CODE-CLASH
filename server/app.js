@@ -10,7 +10,16 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 
 const api = express.Router();
 
-// Every API request guarantees the schema exists (idempotent, cached per process).
+// Health first — answers even if the DB is unreachable, so any deployment can be
+// diagnosed straight from the browser: {ok:true, dbStatus:"ok"} = fully working.
+api.get("/health", async (req, res) => {
+  let dbStatus = "ok";
+  try { await db.ensureInit(); }
+  catch (e) { dbStatus = "unreachable: " + (e && e.message ? e.message : "unknown"); }
+  res.json({ ok: true, db: process.env.TURSO_DATABASE_URL ? "turso" : "local-file", dbStatus });
+});
+
+// Every other API request guarantees the schema exists (idempotent, cached per process).
 api.use(async (req, res, next) => {
   try { await db.ensureInit(); next(); }
   catch (err) { console.error("db init failed:", err); res.status(500).json({ error: "Database unavailable" }); }
@@ -190,5 +199,11 @@ api.post("/rooms/:id/answer", async (req, res) => {
 
 app.use("/api", api);
 app.use((req, res) => res.status(404).json({ error: "Not found" }));
+
+// Unexpected failures return JSON (never an HTML error page) and are logged.
+app.use((err, req, res, _next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Server error: " + (err && err.message ? err.message : "unknown") });
+});
 
 module.exports = app;

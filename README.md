@@ -37,12 +37,23 @@ The app is serverless-ready, but the database must live in the cloud (a file DB 
 
 > **Note on Vercel:** everything works — rooms, questions, queue, buzzer race (atomic), scoring, leaderboard. The only difference from local: live updates arrive via 1.5s polling instead of instant WebSocket pushes.
 
+### Troubleshooting: "Request failed" / "Cannot reach the game server" on Vercel
+
+Open `https://<your-app>/api/health` in a browser first — it tells you exactly what's wrong:
+
+- **404 / HTML page** → the API function isn't deployed. Make sure the Vercel project's Root Directory is the **repo root** (not a subfolder) and Framework Preset is **Other**. The `vercel.json` routes `/api/*` to `api/index.js`; that file must exist in the deployed commit.
+- **`{"dbStatus":"unreachable: ..."}`** → the API works but the database env vars are missing or wrong: set `TURSO_DATABASE_URL` (`libsql://...`) and `TURSO_AUTH_TOKEN` in Project → Settings → Environment Variables, then **Redeploy**.
+- **`{"dbStatus":"ok"}`** → the backend is fully working; the problem is browser-side (hard-refresh with Ctrl+Shift+R).
+
+If your deployment shows a "Vite + React" page or an app that isn't this one, the Vercel project is connected to the wrong repository or was scaffolded from a template — reconnect it at vercel.com → Project → Settings → Git.
+
 ## Admin
 Default login: `admin` / `1234`. After login you choose a room — create a new one or re-enter an existing room ID.
 
 ## API overview
 All endpoints live under `/api`:
 
+- `GET /health` — deployment self-check (`dbStatus: ok` = fully working)
 - `POST /login` — admin auth
 - `GET /rooms` · `POST /rooms` · `GET /rooms/:id/exists`
 - `GET /questions` · `POST /questions`
